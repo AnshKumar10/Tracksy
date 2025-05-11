@@ -1,14 +1,17 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
+    "target": "ES2020", // Modern JS target
+    "module": "commonjs", // For Node.js
+    "moduleResolution": "node",
+    "rootDir": "./", // Root of your source files
+    "outDir": "./dist", // Where compiled JS goes
+    "baseUrl": ".", // For absolute imports
+    "typeRoots": ["./types", "./node_modules/@types"], // Include custom types
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true // Faster builds
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["controllers", "models", "routes", "middlewares", "types"],
+  "exclude": ["dist", "node_modules"]
 }
