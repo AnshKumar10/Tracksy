@@ -1,13 +1,17 @@
+import { Types } from "mongoose";
+
+export enum UserRolesEnum {
+  ADMIN = "admin",
+  MEMBER = "member",
+}
+
+type UserRoles = UserRolesEnum.ADMIN | UserRolesEnum.MEMBER;
+
 export interface UserInterface {
-  id: string;
+  _id: Types.ObjectId;
   name: string;
   email: string;
   password: string;
   profilePic: string | null;
-  role: "member" | "admin";
-}
-
-export enum UserRoles {
-  ADMIN = "admin",
-  MEMBER = "member",
+  role: UserRoles;
 }

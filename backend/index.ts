@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { connectToDb } from "./configs/db";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
+import taskRoutes from "./routes/taskRoutes";
 
 dotenv.config();
 
@@ -24,7 +25,10 @@ app.use(
 connectToDb();
 
 app.use("/api/auth", authRoutes);
-app.use("/api/user", userRoutes);
+
+app.use("/api/users", userRoutes);
+
+app.use("/api/tasks", taskRoutes);
 
 const PORT = process.env.PORT || 8000;
 

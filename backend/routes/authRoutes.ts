@@ -6,7 +6,7 @@ import {
   updateUserProfile,
 } from "../controllers/authControllers";
 import { protect } from "../middlewares/authMiddleware";
-import { upload } from "middlewares/uploadMiddleware";
+import { upload } from "../middlewares/uploadMiddleware";
 
 const router = Router();
 

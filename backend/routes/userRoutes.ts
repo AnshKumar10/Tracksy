@@ -1,6 +1,6 @@
-import { getUserById, getUsers } from "controllers/userControllers";
+import { getUserById, getUsers } from "../controllers/userControllers";
 import { Router } from "express";
-import { adminOnlyAccess, protect } from "middlewares/authMiddleware";
+import { adminOnlyAccess, protect } from "../middlewares/authMiddleware";
 
 const router = Router();
 

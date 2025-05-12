@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import { Users } from "../models/Users";
 import bcrypt from "bcrypt";
 import { Types } from "mongoose";
-import { UserRoles } from "../types/users";
+import { UserRolesEnum } from "../types/users";
 
 /**
  * Generate a JWT token for a given user ID.
@@ -32,8 +32,8 @@ export const registerUser = async (request: Request, response: Response) => {
 
     const role =
       user?.adminInviteToken === process.env.ADMIN_INVITE_TOKEN
-        ? UserRoles.ADMIN
-        : UserRoles.MEMBER;
+        ? UserRolesEnum.ADMIN
+        : UserRolesEnum.MEMBER;
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(user?.password, salt);
@@ -108,7 +108,7 @@ export const loginUser = async (request: Request, response: Response) => {
  */
 export const getUserProfile = async (request: Request, response: Response) => {
   try {
-    const userId = request?.user?.id;
+    const userId = request?.user?._id;
     const user = await Users.findById(userId)?.select("-password");
 
     if (!user) {
@@ -135,7 +135,7 @@ export const updateUserProfile = async (
   response: Response
 ) => {
   try {
-    const userId = request?.user?.id;
+    const userId = request?.user?._id;
     const user = await Users.findById(userId);
 
     if (!user) {

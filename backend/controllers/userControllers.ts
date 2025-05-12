@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { Tasks } from "models/Tasks";
-import { Users } from "models/Users";
-import { TaskStatusEnum } from "types/tasks";
-import { UserRoles } from "types/users";
+import { Tasks } from "../models/Tasks";
+import { Users } from "../models/Users";
+import { TaskStatusEnum } from "../types/tasks";
+import { UserRolesEnum } from "../types/users";
 
 /**
  * @route   GET /api/users
@@ -11,7 +11,7 @@ import { UserRoles } from "types/users";
  */
 export const getUsers = async (request: Request, response: Response) => {
   try {
-    const users = await Users.find({ role: UserRoles.MEMBER }).select(
+    const users = await Users.find({ role: UserRolesEnum.MEMBER }).select(
       "-password"
     );
 
