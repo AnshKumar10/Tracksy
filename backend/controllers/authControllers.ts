@@ -1,20 +1,10 @@
-import jwt from "jsonwebtoken";
 import { Request, Response } from "express";
 import { Users } from "../models/Users";
 import bcrypt from "bcrypt";
 import { Types } from "mongoose";
 import { UserRolesEnum } from "../types/users";
-
-/**
- * Generate a JWT token for a given user ID.
- * @param userId - MongoDB ObjectId or string representing the user
- * @returns JWT token as string
- */
-const generateToken = (userId: string | Types.ObjectId): string => {
-  return jwt.sign({ id: userId.toString() }, process.env.JWT_SECRET!, {
-    expiresIn: "7d",
-  });
-};
+import { generateToken } from "../helpers";
+import { HttpStatusEnum } from "../types";
 
 /**
  * @route   POST /api/users/register
@@ -46,7 +36,7 @@ export const registerUser = async (request: Request, response: Response) => {
       role: role,
     });
 
-    response.status(201).json({
+    response.status(HttpStatusEnum.CREATED).json({
       _id: createdUser?._id,
       name: createdUser?.name,
       email: createdUser?.email,
@@ -56,7 +46,7 @@ export const registerUser = async (request: Request, response: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    response.status(500).json({
+    response.status(HttpStatusEnum.INTERNAL_SERVER_ERROR).json({
       message: "Internal Server Error",
       error: err.message,
     });
@@ -75,13 +65,17 @@ export const loginUser = async (request: Request, response: Response) => {
     const user = await Users.findOne({ email: email });
 
     if (!user) {
-      response.status(401).json({ message: "Invalid Email or Password" });
+      response
+        .status(HttpStatusEnum.UNAUTHORIZED)
+        .json({ message: "Invalid Email or Password" });
     }
 
     const isMatch = await bcrypt.compare(password, user?.password || "");
 
     if (!isMatch) {
-      response.status(401).json({ message: "Invalid Email or Password" });
+      response
+        .status(HttpStatusEnum.UNAUTHORIZED)
+        .json({ message: "Invalid Email or Password" });
     }
 
     response.json({
@@ -94,80 +88,7 @@ export const loginUser = async (request: Request, response: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    response.status(500).json({
-      message: "Internal Server Error",
-      error: err.message,
-    });
-  }
-};
-
-/**
- * @route   GET /api/users/profile
- * @desc    Get current user profile
- * @access  Private
- */
-export const getUserProfile = async (request: Request, response: Response) => {
-  try {
-    const userId = request?.user?._id;
-    const user = await Users.findById(userId)?.select("-password");
-
-    if (!user) {
-      response.status(401).json({ message: "User not found" });
-    }
-
-    response.json(user);
-  } catch (error) {
-    const err = error as Error;
-    response.status(500).json({
-      message: "Internal Server Error",
-      error: err.message,
-    });
-  }
-};
-
-/**
- * @route   PUT /api/users/profile
- * @desc    Update current user profile
- * @access  Private
- */
-export const updateUserProfile = async (
-  request: Request,
-  response: Response
-) => {
-  try {
-    const userId = request?.user?._id;
-    const user = await Users.findById(userId);
-
-    if (!user) {
-      response.status(401).json({ message: "User not found" });
-      return;
-    }
-
-    const name = request.body?.name;
-    const email = request.body?.email;
-    const password = request.body?.password;
-
-    user.name = name || user?.name;
-    user.email = email || user?.email;
-
-    if (password) {
-      const salt = await bcrypt.genSalt(10);
-      user.password = await bcrypt.hash(password, salt);
-    }
-
-    const updatedUser = await user.save();
-
-    response.json({
-      _id: updatedUser?._id,
-      name: updatedUser?.name,
-      email: updatedUser?.email,
-      profilePic: updatedUser?.profilePic,
-      role: updatedUser?.role,
-      token: generateToken(updatedUser?._id),
-    });
-  } catch (error) {
-    const err = error as Error;
-    response.status(500).json({
+    response.status(HttpStatusEnum.INTERNAL_SERVER_ERROR).json({
       message: "Internal Server Error",
       error: err.message,
     });

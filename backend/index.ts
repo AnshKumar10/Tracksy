@@ -1,7 +1,7 @@
 import express, { urlencoded } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { connectToDb } from "./configs/db";
+import { connectToDb } from "./helpers/db";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
 import taskRoutes from "./routes/taskRoutes";
@@ -24,11 +24,11 @@ app.use(
 
 connectToDb();
 
-app.use("/api/auth", authRoutes);
+app.use("/api/v1/auth", authRoutes);
 
-app.use("/api/users", userRoutes);
+app.use("/api/v1/users", userRoutes);
 
-app.use("/api/tasks", taskRoutes);
+app.use("/api/v1/tasks", taskRoutes);
 
 const PORT = process.env.PORT || 8000;
 

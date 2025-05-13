@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 import { Tasks } from "../models/Tasks";
 import { UserRolesEnum } from "../types/users";
 import { TaskStatusEnum, TaskPriorityEnum } from "../types/tasks";
+import { HttpStatusEnum } from "../types";
 
 /** Utility: Check if user is admin */
 const isAdmin = (role?: string): boolean => role === UserRolesEnum.ADMIN;
@@ -158,7 +159,7 @@ export const getTasks = async (request: Request, response: Response) => {
       },
     });
   } catch (error) {
-    response.status(500).json({
+    response.status(HttpStatusEnum.INTERNAL_SERVER_ERROR).json({
       message: "Failed to fetch tasks",
       error: (error as Error).message,
     });
@@ -177,11 +178,14 @@ export const getTaskById = async (request: Request, response: Response) => {
       "name email profilePic"
     );
 
-    if (!task) response.status(404).json({ message: "Task not found" });
+    if (!task)
+      response
+        .status(HttpStatusEnum.NOT_FOUND)
+        .json({ message: "Task not found" });
 
     response.json(task);
   } catch (error) {
-    response.status(500).json({
+    response.status(HttpStatusEnum.INTERNAL_SERVER_ERROR).json({
       message: "Failed to retrieve task",
       error: (error as Error).message,
     });
@@ -199,7 +203,7 @@ export const createTask = async (request: Request, response: Response) => {
 
     if (!Array.isArray(task.assignedTo)) {
       response
-        .status(400)
+        .status(HttpStatusEnum.BAD_REQUEST)
         .json({ message: "Assigned To must be an array of User IDs" });
     }
 
@@ -214,10 +218,10 @@ export const createTask = async (request: Request, response: Response) => {
     });
 
     response
-      .status(201)
+      .status(HttpStatusEnum.CREATED)
       .json({ message: "Task created successfully", createdTask });
   } catch (error) {
-    response.status(500).json({
+    response.status(HttpStatusEnum.INTERNAL_SERVER_ERROR).json({
       message: "Failed to create task",
       error: (error as Error).message,
     });
@@ -234,7 +238,9 @@ export const updateTask = async (request: Request, response: Response) => {
     const task = await Tasks.findById(request.params.id);
 
     if (!task) {
-      response.status(404).json({ message: "Task not found" });
+      response
+        .status(HttpStatusEnum.NOT_FOUND)
+        .json({ message: "Task not found" });
       return;
     }
 
@@ -249,7 +255,7 @@ export const updateTask = async (request: Request, response: Response) => {
     if (request.body.assignedTo) {
       if (!Array.isArray(request.body.assignedTo)) {
         response
-          .status(400)
+          .status(HttpStatusEnum.BAD_REQUEST)
           .json({ message: "Assigned To must be an array of User IDs" });
       }
       task.assignedTo = request.body.assignedTo;
@@ -258,7 +264,7 @@ export const updateTask = async (request: Request, response: Response) => {
     const updatedTask = await task.save();
     response.json({ message: "Task updated successfully", updatedTask });
   } catch (error) {
-    response.status(500).json({
+    response.status(HttpStatusEnum.INTERNAL_SERVER_ERROR).json({
       message: "Failed to update task",
       error: (error as Error).message,
     });
@@ -274,14 +280,16 @@ export const deleteTask = async (request: Request, response: Response) => {
   try {
     const task = await Tasks.findById(request.params.id);
     if (!task) {
-      response.status(404).json({ message: "Task not found" });
+      response
+        .status(HttpStatusEnum.NOT_FOUND)
+        .json({ message: "Task not found" });
       return;
     }
 
     await task.deleteOne();
     response.json({ message: "Task deleted successfully" });
   } catch (error) {
-    response.status(500).json({
+    response.status(HttpStatusEnum.INTERNAL_SERVER_ERROR).json({
       message: "Failed to delete task",
       error: (error as Error).message,
     });
@@ -301,14 +309,18 @@ export const updateTaskStatus = async (
     const task = await Tasks.findById(request.params.id);
 
     if (!task) {
-      response.status(404).json({ message: "Task not found" });
+      response
+        .status(HttpStatusEnum.NOT_FOUND)
+        .json({ message: "Task not found" });
       return;
     }
 
     if (
       !isUserAuthorized(request.user?._id, task.assignedTo, request.user?.role)
     ) {
-      response.status(403).json({ message: "Not authorized to update status" });
+      response
+        .status(HttpStatusEnum.FORBIDDEN)
+        .json({ message: "Not authorized to update status" });
     }
 
     task.status = request.body.status || task.status;
@@ -321,7 +333,7 @@ export const updateTaskStatus = async (
     await task.save();
     response.json({ message: "Task status updated", task });
   } catch (error) {
-    response.status(500).json({
+    response.status(HttpStatusEnum.INTERNAL_SERVER_ERROR).json({
       message: "Failed to update status",
       error: (error as Error).message,
     });
@@ -342,7 +354,9 @@ export const updateTaskChecklist = async (
     const task = await Tasks.findById(request.params.id);
 
     if (!task) {
-      response.status(404).json({ message: "Task not found" });
+      response
+        .status(HttpStatusEnum.NOT_FOUND)
+        .json({ message: "Task not found" });
       return;
     }
 
@@ -350,7 +364,7 @@ export const updateTaskChecklist = async (
       !isUserAuthorized(request.user?._id, task.assignedTo, request.user?.role)
     ) {
       response
-        .status(403)
+        .status(HttpStatusEnum.FORBIDDEN)
         .json({ message: "Not authorized to update checklist" });
     }
 
@@ -378,7 +392,7 @@ export const updateTaskChecklist = async (
 
     response.json({ message: "Checklist updated", updatedTask });
   } catch (error) {
-    response.status(500).json({
+    response.status(HttpStatusEnum.INTERNAL_SERVER_ERROR).json({
       message: "Failed to update checklist",
       error: (error as Error).message,
     });
@@ -398,7 +412,7 @@ export const getDashboardReport = async (
     const report = await generateDashboardReport();
     response.json(report);
   } catch (error) {
-    response.status(500).json({
+    response.status(HttpStatusEnum.INTERNAL_SERVER_ERROR).json({
       message: "Failed to fetch dashboard report",
       error: (error as Error).message,
     });
@@ -419,7 +433,7 @@ export const getUserSpecificDashboardReport = async (
     const report = await generateDashboardReport({ assignedTo: userId });
     response.json(report);
   } catch (error) {
-    response.status(500).json({
+    response.status(HttpStatusEnum.INTERNAL_SERVER_ERROR).json({
       message: "Failed to fetch user dashboard report",
       error: (error as Error).message,
     });
