@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -14,8 +14,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import AuthLayout from "@/components/layouts/AuthLayout";
+import axiosInstance from "@/lib/axios";
+import { UserRoles } from "@/lib/enums";
+import { useNavigate } from "react-router-dom";
+import { API_PATHS } from "@/lib/apiPaths";
+import { UserContext } from "@/context/UserContext";
+import type { UserInterface } from "@/lib/types/user";
+import { handleApiError } from "@/lib/utils";
 
-// Login form validation schema
 const loginSchema = yup.object({
   email: yup
     .string()
@@ -27,8 +33,14 @@ const loginSchema = yup.object({
     .required("Password is required"),
 });
 
+type LoginFormValues = yup.InferType<typeof loginSchema>;
+
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
+
+  const navigate = useNavigate();
+
+  const userContext = useContext(UserContext);
 
   const loginForm = useForm({
     resolver: yupResolver(loginSchema),
@@ -38,9 +50,23 @@ export default function LoginForm() {
     },
   });
 
-  const onLoginSubmit = (data) => {
-    console.log("Login data:", data);
-    // Add your login logic here
+  const onLoginSubmit = async (payload: LoginFormValues) => {
+    try {
+      const response = await axiosInstance.post<UserInterface>(
+        API_PATHS.AUTH.LOGIN,
+        payload
+      );
+      const { token, role } = response.data;
+
+      if (token) {
+        localStorage.setItem("access_token", token);
+        userContext?.updateUser(response.data);
+        if (role === UserRoles.ADMIN) navigate("/admin/dashboard");
+        else if (role === UserRoles.MEMBER) navigate("/user/dashboard");
+      }
+    } catch (error) {
+      handleApiError(error);
+    }
   };
 
   return (
