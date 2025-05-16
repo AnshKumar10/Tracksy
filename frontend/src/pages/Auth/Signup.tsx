@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useContext, useRef, useState } from "react";
 import * as yup from "yup";
 import { Eye, EyeOff, Upload, X } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -15,6 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import AuthLayout from "@/components/layouts/AuthLayout";
+import type { UserInterface } from "@/lib/types/user";
+import axiosInstance from "@/lib/axios";
+import { API_PATHS } from "@/lib/apiPaths";
+import { UserContext } from "@/context/UserContext";
+import { UserRoles } from "@/lib/enums";
+import { useNavigate } from "react-router-dom";
+import { handleApiError, imageUploadHandler } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 
 const signupSchema = yup.object({
   fullName: yup.string().required("Full name is required"),
@@ -30,8 +38,10 @@ const signupSchema = yup.object({
     .string()
     .oneOf([yup.ref("password")], "Passwords must match")
     .required("Please confirm your password"),
-  inviteToken: yup.string().required("Invite token is required"),
+  inviteToken: yup.string().optional(),
 });
+
+type SignupFormValues = yup.InferType<typeof signupSchema>;
 
 export default function SignupForm() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -39,6 +49,12 @@ export default function SignupForm() {
     password: false,
     confirmPassword: false,
   });
+
+  const userContext = useContext(UserContext);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const navigate = useNavigate();
 
   const form = useForm({
     resolver: yupResolver(signupSchema),
@@ -51,24 +67,47 @@ export default function SignupForm() {
     },
   });
 
-  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setAvatarPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+  const handleAvatarClick = () => fileInputRef.current?.click();
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const removeAvatar = () => setAvatarPreview(null);
+
+  const onSubmit = async (values: SignupFormValues) => {
+    let profileImage: string | null = null;
+
+    try {
+      if (avatarPreview) {
+        // TODO : Fix this image not uploading issue
+        const response = await imageUploadHandler(avatarPreview);
+        profileImage = response;
+      }
+
+      const response = await axiosInstance.post<UserInterface>(
+        API_PATHS.AUTH.REGISTER,
+        {
+          name: values?.fullName,
+          email: values?.email,
+          password: values?.password,
+          adminInviteToken: values?.inviteToken,
+          profileImage,
+        }
+      );
+
+      const { token, role } = response.data;
+
+      if (token) {
+        localStorage.setItem("access_token", token);
+        userContext?.updateUser(response.data);
+        if (role === UserRoles.ADMIN) navigate("/admin/dashboard");
+        else if (role === UserRoles.MEMBER) navigate("/user/dashboard");
+      }
+    } catch (error) {
+      handleApiError(error);
     }
-  };
-
-  const removeAvatar = () => {
-    setAvatarPreview(null);
-  };
-
-  const onSubmit = (data: any) => {
-    console.log("Signup data:", data);
-    // Add your signup logic here
   };
 
   return (
@@ -83,17 +122,24 @@ export default function SignupForm() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Avatar Upload */}
+          {/* Avatar Upload */}
           <div className="flex flex-col items-center mb-4">
             <div className="relative">
-              <Avatar className="w-20 h-20 border-2 border-dashed border-gray-300 bg-gray-100">
-                {avatarPreview ? (
-                  <AvatarImage src={avatarPreview} />
-                ) : (
-                  <AvatarFallback className="bg-indigo-100 text-indigo-600">
-                    <Upload size={24} />
-                  </AvatarFallback>
-                )}
-              </Avatar>
+              <button
+                type="button"
+                onClick={handleAvatarClick}
+                className="focus:outline-none"
+              >
+                <Avatar className="w-20 h-20 border-2 border-dashed border-gray-300 bg-gray-100 hover:opacity-90">
+                  {avatarPreview ? (
+                    <AvatarImage src={avatarPreview} />
+                  ) : (
+                    <AvatarFallback className="bg-indigo-100 text-indigo-600">
+                      <Upload size={24} />
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              </button>
               {avatarPreview && (
                 <Button
                   type="button"
@@ -106,19 +152,22 @@ export default function SignupForm() {
                 </Button>
               )}
             </div>
-            <label htmlFor="avatar-upload" className="cursor-pointer mt-2">
-              <div className="text-sm font-medium text-indigo-600 hover:underline">
-                {avatarPreview ? "Change avatar" : "Upload avatar"}
-              </div>
-              <input
-                id="avatar-upload"
-                name="avatar"
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={handleAvatarUpload}
-              />
-            </label>
+            <Label
+              htmlFor="avatar-upload"
+              className="cursor-pointer mt-2 text-sm font-medium text-indigo-600 hover:underline"
+              onClick={handleAvatarClick}
+            >
+              {avatarPreview ? "Change avatar" : "Upload avatar"}
+            </Label>
+            <input
+              ref={fileInputRef}
+              id="avatar-upload"
+              name="avatar"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
           </div>
 
           {/* Fields */}
